@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<head>
+    <title>Chess</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+</head>
+
+<body background="{{picBackground}}" style="background-repeat: no-repeat;background-size: cover;" >
+    <header>
+        <nav class="navbar navbar-expand-md navbar-dark" style="background-color: tomato">
+            <div>
+                <ul class="navbar-nav">
+                    <li><a href="/" class="nav-link">Chess</a></li>
+                    <li><a href="/login" class="nav-link">Đăng Nhập</a></li>
+                    <li><a href="/register" class="nav-link">Đăng Ký</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <br>
+        <div class="container col-md-5">
+            <div class="card">
+                <div class="card-body">
+                    <form action="login" method="POST">
+                        <p class="text-danger">{{error}}</p>
+                        <fieldset class="form-group">
+                            <label>Tài Khoản</label> <input type="text" class="form-control" id="tk" name="tk" required="required">
+                        </fieldset>
+
+                        <fieldset class="form-group">
+                            <label>Mật Khẩu</label> <input type="password" class="form-control" id="mk" name="mk" required="required">
+                        </fieldset>
+
+                        <button id="btnlogin" type="submit" class="btn btn-success">Đăng Nhập</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+</body>
+
+</html>
