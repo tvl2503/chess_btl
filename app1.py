@@ -5,7 +5,7 @@ import chess.polyglot
 import traceback
 import chess.pgn
 import chess.engine
-from flask import Flask, Response, jsonify, render_template, request, url_for,redirect, session,json
+from flask import Flask, Response, jsonify, render_template, request, url_for,redirect, session
 from flask_session import Session
 import webbrowser
 from flask_mysqldb import MySQL
@@ -13,7 +13,7 @@ import MySQLdb.cursors
 import os
 
 
-ls = ''
+
 app = Flask(__name__)
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
@@ -22,6 +22,8 @@ app.config['MYSQL_DB'] = 'chess'
 app.config['UPLOAD_FOLDER']=os.path.join('static','pics')
 sess = Session()
 mysql = MySQL(app)
+
+# Evaluating the board
 pawntable = [
     0, 0, 0, 0, 0, 0, 0, 0,
     5, 10, 10, -20, -20, 10, 10, 5,
@@ -133,6 +135,7 @@ def evaluate_board():
         return -eval
 
 
+# Searching the best move using minimax and alphabeta algorithm with negamax implementation
 def alphabeta(alpha, beta, depthleft):
     bestscore = -9999
     if (depthleft == 0):
@@ -171,44 +174,50 @@ def quiesce(alpha, beta):
 
 
 def selectmove(depth):
-    bestMove = chess.Move.null()
-    bestValue = -99999
-    alpha = -100000
-    beta = 100000
-    for move in board.legal_moves:
-        board.push(move)
-        boardValue = -alphabeta(-beta, -alpha, depth - 1)
-        if boardValue > bestValue:
-            bestValue = boardValue
-            bestMove = move
-        if (boardValue > alpha):
-            alpha = boardValue
-        board.pop()
-    return bestMove
+    try:
+        # move = chess.polyglot.MemoryMappedReader("C:/Users/Linh Tran Vo/Downloads/Chess-World-master/books/human.bin").weighted_choice(board).move
+        move = chess.polyglot.MemoryMappedReader("C:/Users/Linh Tran Vo/Downloads/books/computer.bin").weighted_choice(board).move
+        # move = chess.polyglot.MemoryMappedReader("C:/Users/Linh Tran Vo/Downloads/books/pecg_book.bin").weighted_choice(board).move
+        return move
+    except:
+        bestMove = chess.Move.null()
+        bestValue = -99999
+        alpha = -100000
+        beta = 100000
+        for move in board.legal_moves:
+            board.push(move)
+            boardValue = -alphabeta(-beta, -alpha, depth - 1)
+            if boardValue > bestValue:
+                bestValue = boardValue
+                bestMove = move
+            if (boardValue > alpha):
+                alpha = boardValue
+            board.pop()
+        return bestMove
+
+def devmove():
+    move = selectmove(3)
+    
+    board.push(move)
 
 
-
+# Searching Stockfish's Move
 def stockfish():
-    engine = chess.engine.SimpleEngine.popen_uci("stockfish.exe")
-    move = engine.play(board, chess.engine.Limit(time=0.1))
-
-    board.push(move.move)
-
-
-def stockfish2():
     engine = chess.engine.SimpleEngine.popen_uci(
         "C:/Users/Linh Tran Vo/Downloads/Chess-World-master/engines/stockfish.exe")
     move = engine.play(board, chess.engine.Limit(time=0.1))
-    return move.move
-
-def check_acc(username):
+    print(move.move)
+    board.push(move.move)
+def check_acc(x,y):
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute('SELECT * FROM player WHERE TK = %s', (username,))
+    cursor.execute('SELECT * FROM player WHERE TK = %s AND MK = %s', (x, y,))
     account = cursor.fetchone()
     if not account:
         return None
     else:
         return account
+
+
 # Front Page of the Flask Web Page
 @app.route("/")
 def main():
@@ -216,13 +225,13 @@ def main():
         return redirect("/login")
   
     global count, board
-    print(board.move_stack)
     player = session['player']
     if count == 1:
         count += 1
-    return render_template("index.html", src = "/board.svg", player = player)
+    return 
     
 
+# Display Board
 @app.route("/board.svg/")
 def board():
     return Response(chess.svg.board(board=board, size=700), mimetype='image/svg+xml')
@@ -239,39 +248,16 @@ def login():
             acc = cursor.fetchone()
             print(acc)
             if acc:
-                session["player"] = acc['Ten']
+                session["player"] = 'a'
                 msg = 'Logged in successfully !'
                 return redirect('/')
             else: 
                 msg = 'Incorrect username / password !'
-        except Exception as e :
-            print(e)
+        except NameError :
+            print(NameError)
             msg = 'error '
     
     return render_template('login.html', error = msg)
-@app.route('/register',methods = ['GET', 'POST'])
-def register():
-    msg = ''
-    if request.method == 'POST':
-        try: 
-            username = request.form['username']
-            password = request.form['password']
-            name = request.form['name']
-            acc = check_acc(username)
-            if not acc: 
-                cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-                cursor.execute('INSERT INTO player ( TK, MK, Ten, Diem) VALUES (%s,%s,%s,0)', (username,password,name))
-                mysql.connection.commit()
-                session["player"] = name
-                return redirect('/')
-            else:
-                msg = 'Tài khoản đã tồn tại'
-
-        except  :
-            msg = 'error '
-
-    return render_template('register.html', error = msg)
-    
 @app.route('/logout')
 def logout():
     session.pop('player', None)
@@ -286,34 +272,16 @@ def move():
         traceback.print_exc()
     return main()
 
+# Make UCI Compatible engine's move
 @app.route("/engine/", methods=['POST'])
 def engine():
     try:
         stockfish()
-
+        # cdrill()
+        # deuterium()
     except Exception:
         traceback.print_exc()
     return main()
-@app.route("/engine2/")
-def engine2():
-    try:
-        move = stockfish2()
-        s = str(move)
-        print
-        return jsonify({"moved" : s})
-    except Exception:
-        traceback.print_exc()
-        return jsonify({"move"})
-
-# Alpha Beta Move
-@app.route('/AlphaBeta/',methods=['POST'])
-def alpha_beta():
-    try:
-        move = selectmove(3)
-        board.push_san(str(move))
-    except Exception:
-        traceback.print_exc()
-    return main() 
 
 
 # New Game
@@ -343,5 +311,5 @@ if __name__ == '__main__':
     app.debug = True
     count = 1
     board = chess.Board()
-    webbrowser.open("http://127.0.0.1:5000/")
+    webbrowser.open("http://127.0.0.1:5001/")
     app.run()

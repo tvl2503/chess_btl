@@ -1,91 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <title>Chess AI</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta
-          name="description"           
-          content="A simple chess AI.">
 
-          <link rel="stylesheet" 
-          href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" 
-          integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" 
-          crossorigin="anonymous">
-
-      <!-- Custom CSS -->
-
-
-      <!-- Google Icons (Material Design) -->
-      <link rel="stylesheet" 
-          href="https://fonts.googleapis.com/icon?family=Material+Icons"
-          crossorigin="anonymous">
-
-      <!-- Font Awesome -->
-      <script src="https://kit.fontawesome.com/5b14db5f0b.js" crossorigin="anonymous"></script>
-
-      <!-- jQuery --> 
-      <script
-          src="https://code.jquery.com/jquery-3.5.1.js"
-          integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc="
-          crossorigin="anonymous">
-      </script>
-
-      <!-- Chessboard JS -->
-      <link rel="stylesheet"
-          href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css"
-          integrity="sha384-q94+BZtLrkL1/ohfjR8c6L+A6qzNH9R2hBLwyoAfu3i/WCvQjzL2RQJ3uNHDISdU"
-          crossorigin="anonymous">
-      <script defer src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"
-          integrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUg3QbPyX8kWyb93+8AC/pPWTzj+nHtbC5bxD"
-          crossorigin="anonymous"></script>
-
-      <!-- Chess JS (slightly modified) -->
-      <script defer src="../static/js/chess.js"></script>
-      <script defer src="../static/index.js"></script>
-      </script>
-      <style>
-          body{
-              background-image: url('https://cdn.hinhnen4k.net/uploads/2021/11/chess_figures_game_208615_3840x2160.jpg');
-              background-repeat: no-repeat;
-              background-size: 100%;
-          }
-      </style>
-      <!-- Bootstrap JS --> 
-      <script defer
-          src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js" 
-          integrity="sha384-6khuMg9gaYr5AxOqhkVIODVIvm9ynTT5J4V1cfthmT+emCG6yVmEZsRHdxlotUnm" 
-          crossorigin="anonymous">
-      </script>
-
-      <!-- Custom JS -->
-      <script defer src="../static/js/index.js"></script>
-        
-    </head>
-    <body >
-        <nav class="navbar navbar-expand-lg bg-dark ">
-            <div class="container-fluid">
-              <a class="navbar-brand text-light" href="#">Chess</a>
-              <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-              </button>
-              <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                  <li class="nav-item">
-                    <a class="nav-link  text-light" aria-current="page" href="#">Home</a>
-                  </li>
-                  <li class="nav-item">
-                    <a class="nav-link text-light" href="/rank">Rank</a>
-                  </li>
-                  <li class="nav-item">
-                    <a class="nav-link text-light" href="/login">Login</a>
-                  </li>
-                  <li class="nav-item">
-                    <a class="nav-link text-light" href="/register">Register</a>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </nav>
+  {% extends 'layout.html' %}
+  {% block content %}
         <section class="section">
 
             <div class="main d-flex container mt-5  ">
@@ -95,9 +10,10 @@
                 <div class="feature flex-grow-1 bg-dark rounded">
                 <form action="/move/" class="m-3"><input name="move" placeholder="Nhập nước đi" class="p-1" type="text"></input><input class="bg-success border text-light rounded p-1 ml-2" type="submit" value="Ok:"></form>
                 <form action="/engine/" method="post"><button class="btn btn-success m-3" name="Move" type="submit">Máy đi</button></form>
+                <form action="/AlphaBeta/" method="post"><button class="btn btn-success m-3" name="Move" type="submit">Alpha beta</button></form>
                 <div class="form-floating p-3" >
-                    <label for="floatingTextarea" class="bg-success text-light rounded p-1 mr-2">Lịch sử nước đi</label>
-                    <textarea class="form-control" id="floatingTextarea" disabled> </textarea>
+                    <label for="floatingTextarea" class="bg-success text-light rounded p-1 mr-2" >Lịch sử nước đi</label>
+                    <textarea height = "300" class="form-control" id="floatingTextarea" disabled> </textarea>
                   </div>
                   <div class="d-flex">
                     <form action="/undo/" method="post"><button name="Undo" class="btn btn-success m-3" type="submit">Undo</button></form>
@@ -106,5 +22,4 @@
                 </div>
             </div>
         </section>
-    </body>
-</html>
+{% endblock %}
