@@ -6,21 +6,24 @@ import traceback
 import chess.pgn
 import chess.engine
 from flask import Flask, Response, jsonify, render_template, request, url_for,redirect, session,json
-from flask_session import Session
-import webbrowser
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
 import os
-
-
+import json
+from flask_cors import CORS
+from flask_socketio import SocketIO
 ls = ''
 app = Flask(__name__)
+CORS(app)
+app.config['SECRET_KEY'] = 'secret!'
+socketio = SocketIO(app)
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = 'volinh01'
 app.config['MYSQL_DB'] = 'chess'
 app.config['UPLOAD_FOLDER']=os.path.join('static','pics')
-sess = Session()
+
+app.config['CORS_HEADERS'] = 'Content-Type'
 mysql = MySQL(app)
 pawntable = [
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -196,14 +199,15 @@ def stockfish():
 
 
 def stockfish2():
-    engine = chess.engine.SimpleEngine.popen_uci(
-        "C:/Users/Linh Tran Vo/Downloads/Chess-World-master/engines/stockfish.exe")
+    engine = chess.engine.SimpleEngine.popen_uci("stockfish.exe")
     move = engine.play(board, chess.engine.Limit(time=0.1))
-    return move.move
+    board.push(move.move)
 
-def check_acc(username):
+    return board.fen()
+
+def check_acc(username, email):
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute('SELECT * FROM player WHERE TK = %s', (username,))
+    cursor.execute('SELECT * FROM player WHERE username = %s AND email = %s' , (username,email))
     account = cursor.fetchone()
     if not account:
         return None
@@ -212,79 +216,81 @@ def check_acc(username):
 # Front Page of the Flask Web Page
 @app.route("/")
 def main():
-    if not 'player' in session:
-        return redirect("/login")
+
   
     global count, board
     print(board.move_stack)
-    player = session['player']
+
     if count == 1:
         count += 1
-    return render_template("index.html", src = "/board.svg", player = player)
+    return render_template("index.html", src = "/board.svg")
     
 
 @app.route("/board.svg/")
 def board():
     return Response(chess.svg.board(board=board, size=700), mimetype='image/svg+xml')
 
-@app.route("/login", methods = ['GET', 'POST'])
+@app.route("/api/login", methods = ['POST'])
 def login():
-    msg = ''
-    if request.method == 'POST':
+        msg = ''
         try:
-            username = request.form['username']
-            password = request.form['password']
+            email = request.args.get('email')
+            password = request.args.get('password')
             cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute('SELECT * FROM player WHERE TK = % s AND MK = % s', (username, password, ))
+            cursor.execute('SELECT * FROM player WHERE email = % s AND password = % s', (email, password ))
             acc = cursor.fetchone()
             print(acc)
             if acc:
-                session["player"] = acc['Ten']
+                acc.pop("password")
                 msg = 'Logged in successfully !'
-                return redirect('/')
+                return jsonify({"acc" :(json.dumps(acc)), "msg" : msg, "code" : 200})
             else: 
                 msg = 'Incorrect username / password !'
+                return jsonify({"code" : 400, "msg" : msg})
         except Exception as e :
-            print(e)
+            print("ee",e)
             msg = 'error '
-    
-    return render_template('login.html', error = msg)
-@app.route('/register',methods = ['GET', 'POST'])
+            return jsonify("Lỗi")
+   
+@app.route('/api/register',methods = ['GET', 'POST'])
 def register():
     msg = ''
-    if request.method == 'POST':
-        try: 
-            username = request.form['username']
-            password = request.form['password']
-            name = request.form['name']
-            acc = check_acc(username)
-            if not acc: 
-                cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-                cursor.execute('INSERT INTO player ( TK, MK, Ten, Diem) VALUES (%s,%s,%s,0)', (username,password,name))
-                mysql.connection.commit()
-                session["player"] = name
-                return redirect('/')
-            else:
-                msg = 'Tài khoản đã tồn tại'
-
-        except  :
+    try: 
+        username = request.args.get('username')
+        password = request.args.get('password')
+        fullname = request.args.get('fullname')
+        email = request.args.get('email')
+        acc = check_acc(username, email)
+        if not acc: 
+            cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+            cursor.execute('INSERT INTO player ( username, password, fullname, email) VALUES (%s,%s,%s,%s)', (username,password,fullname,email))
+            mysql.connection.commit()
+            print("da den day")
+            return jsonify({"msg" : "Đăng ký thành công"})
+        else:
+            msg = 'Tài khoản đã tồn tại'
+            return jsonify({msg})
+    except  :
             msg = 'error '
-
-    return render_template('register.html', error = msg)
+            return jsonify({msg})
     
-@app.route('/logout')
-def logout():
-    session.pop('player', None)
-    return redirect(url_for('login'))
-@app.route("/move/")
+
+
+@app.route("/api/move", methods = ['POST'] )
 def move():
     try:
-        move = request.args.get('move', default="")
-        
+
+        move = request.args.get("move")
         board.push_san(move)
-    except Exception:
-        traceback.print_exc()
-    return main()
+        stockfish()
+
+        history = []
+        for i in range(len(board.move_stack)):
+            history.append(str(board.move_stack[i]))
+        return jsonify({"fen": str(board.fen()), "history" : history})
+    except :
+        return jsonify("error", 404)
+    # return main()
 
 @app.route("/engine/", methods=['POST'])
 def engine():
@@ -294,12 +300,12 @@ def engine():
     except Exception:
         traceback.print_exc()
     return main()
+
 @app.route("/engine2/")
 def engine2():
     try:
         move = stockfish2()
         s = str(move)
-        print
         return jsonify({"moved" : s})
     except Exception:
         traceback.print_exc()
@@ -317,17 +323,30 @@ def alpha_beta():
 
 
 # New Game
-@app.route("/game/", methods=['POST'])
+@app.route("/api/game/", methods=['GET'])
 def game():
     board.reset()
-    return main()
+    return jsonify({"fen": str(board.fen())})
+@socketio.on('message') 
+def handlemsg():
+    socketio.send(jsonify({"fen": str(board.fen())}))
+@app.route("/rank/")
+def rank():
+    board.reset()
+    return render_template("rank.html")
 
 
 # Undo
-@app.route("/undo/", methods=['POST'])
+@app.route("/api/undo/", methods=['POST'])
 def undo():
     try:
-        board.pop()
+        board.pop();
+        board.pop();
+
+        history = []
+        for i in range(len(board.move_stack)):
+            history.append(str(board.move_stack[i]))
+        return jsonify({"fen": str(board.fen()), "history" : history})
     except Exception:
         traceback.print_exc()
     return main()
@@ -336,12 +355,6 @@ def undo():
 
 # Main Function
 if __name__ == '__main__':
-    app.secret_key = 'super secret key'
-    app.config['SESSION_TYPE'] = 'filesystem'
-    sess.init_app(app)
-
-    app.debug = True
     count = 1
     board = chess.Board()
-    webbrowser.open("http://127.0.0.1:5000/")
-    app.run()
+    app.run(debug = True)
